@@ -1,20 +1,57 @@
 extends Control
 
 var con_node : Resource = load("res://Scenes/ConversationNode.tscn")
+var con_node_op : Resource = load("res://Scenes/OptionSubNode.tscn")
+
+# this ensures there are never any node-naming conflicts
+# by giving each node a unique identifier
+# and yes, this does mean some identifiers will be skipped if nodes are removed
+# we have to save this to avoid conflicts
 var node_index : int = 0
+
+# this one's just the total number of nodes in the graph
+# idk if it'll be needed
+var total_nodes : int = 0
+
+# the offset for nodes appearing at the cursor
+# should be roughly half the height of the con_node without any op_subs
 var con_node_offset : Vector2 = Vector2(0,-90)
 
 @onready var graph_edit : GraphEdit = $GraphEdit
 @onready var graph_edit_path : NodePath = graph_edit.get_path()
 
+# for speaker inheritance check
 @onready var inh_speaker_box : NodePath = "VBoxContainer/InheritSpeakerCheck"
 @onready var sp_l_ed : NodePath = "VBoxContainer/HBoxContainer/SpeakerLineEdit"
 
-@onready var conf : ConfirmationModal = $ConfirmationModal
+# modals
 @onready var right_click_menu : Control = $RightClickNodeMenu
 
+@onready var file_menu : PopupMenu = $MenuBar/FileMenu
+@onready var file_menu_options : Array = ["New","Save","Save As","Load"]
+
+@onready var save_as_modal : FileDialog = $SaveAs
+@onready var load_modal : FileDialog = $Load
+
+func _ready() -> void:
+	save_as_modal.current_dir = "res://"
+	file_menu.id_pressed.connect(file_menu_bhvr)
+	for i : String in file_menu_options:
+		file_menu.add_item(i)
+
 func _on_button_pressed() -> void: 						
-	create_node("con_node", get_viewport_rect().size / 2)			
+	var new_node : Node = create_node("con_node", get_viewport_rect().size / 2)
+	new_node.remove_connections.connect(remove_connections.bind(new_node))
+	
+func remove_connections(node : GraphNode) -> void:
+	if node.get_child_count() > 2:
+		var connection_list : Array = graph_edit.get_connection_list_from_node(
+																	node.name)
+		var removed_slot_index : int = node.get_output_port_count()-1
+		for dict : Dictionary in connection_list:
+			if dict["from_port"] == removed_slot_index:
+				graph_edit.disconnect_node(dict["from_node"],dict["from_port"],
+											dict["to_node"],dict["to_port"])
 
 func _on_graph_edit_connection_request(from_node: StringName, from_port: int, 
 		to_node: StringName, to_port: int) -> void:
@@ -43,17 +80,12 @@ func speaker_inheritance_check(from_node : StringName,
 func _on_graph_edit_disconnection_request(from_node: StringName, from_port: int, 
 		to_node: StringName, to_port: int) -> void:
 	graph_edit.disconnect_node(from_node, from_port, to_node, to_port)
-														# disconnect them nodes				
+													# disconnect them nodes
 func _on_graph_edit_connection_to_empty(from_node: StringName, from_port: int, 
 			release_position: Vector2) -> void:
 	var new_node : StringName = create_node("con_node", release_position).name
 	graph_edit.connect_node(from_node, from_port, new_node, 0)
 	speaker_inheritance_check(from_node, new_node)
-	
-# right_click_menu.show_menu(get_local_mouse_position())
-#	right_click_menu.drag_info = [from_node, from_port, release_position]
-#func make_node_from_drag(from_node: StringName, from_port: int, 
-#		release_position: Vector2, node_type: String) -> void:
 
 func create_node(node_type : String, position_offset : Vector2) -> Node:
 	var node : Node 
@@ -64,52 +96,102 @@ func create_node(node_type : String, position_offset : Vector2) -> Node:
 		node.position_offset += ((graph_edit.scroll_offset + position_offset
 			) / graph_edit.zoom) + con_node_offset
 		# change the node offset based on node type
-		node.title += " "+str(node_index)	
 	graph_edit.add_child(node)
+	total_nodes += 1
 	return node
 
-func _on_save_button_pressed() -> void:
-	save_data("res://SaveData/DataSave.res")
+func _on_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
+	total_nodes -= len(nodes)
 
-func _on_load_button_pressed() -> void:
-	var is_confirmed : bool = await conf.prompt(true)
-	if is_confirmed:
-		load_data("res://SaveData/DataSave.res")
+# SAVING AND LOADING #
 
-func save_data(file_name: String) -> void:
+# MENU
+
+func file_menu_bhvr(id : int) -> void:
+	if id == 0:
+		print("New")
+	elif id == 1:
+		# Save
+		save_data(save_path)
+	elif id == 2:
+		# Save As
+		save_as_modal.show()
+	elif id == 3:
+		# Load
+		load_modal.show()
+			
+func _on_save_as_file_selected(path: String) -> void:
+	if path.right(4) != ".res":
+		path += ".res"
+	if save_data(path):
+		save_as_modal.hide()
+		
+func _on_load_file_selected(path: String) -> void:
+	load_data(path)
+
+# SAVE
+
+var save_path : String = "res://SaveData/DataSave.res"
+
+func save_data(file_name: String) -> bool:
 	var graph_data : GraphData = GraphData.new()
-#	graph_data.connections = graph_edit.get_connection_list()
 	@warning_ignore("inferred_declaration")
 	for node in graph_edit.get_children():
 		if node is GraphNode:
-			var node_data : NodeData = NodeData.new()
-			node_data.name = node.name
-			node_data.title = node.title
-			node_data.position_offset = node.position_offset
+			var node_data : NodeData = read_node_data(node)
 			graph_data.nodes.append(node_data)
 			# also save type of node
 	graph_data.connections = graph_edit.connections
+	graph_data.node_index = node_index
 	if ResourceSaver.save(graph_data, file_name) == OK:
 		print("saved")
+		return true
 	else:
 		print("Error saving graph_data")
+		return false
 		
-func init_graph(graph_data: GraphData) -> void:
-	clear_graph()
+func read_node_data(node : Node) -> NodeData:
+	var node_data : NodeData = NodeData.new()
+	var choice_data : Array = []
+	node_data.name = node.name
+	node_data.title = node.title
+	node_data.position_offset = node.position_offset
+	node_data.speaker = node.speaker_line_edit.text
+	node_data.inherit_speaker = node.inherit_speaker_check.button_pressed
+	node_data.speaker_text = node.node_text.text
+	
+	@warning_ignore("inferred_declaration")
+	for i in node.get_children():
+		if i is PanelContainer:
+			choice_data.append(read_choice_data(i))
+	node_data.choices = choice_data
+	
+	return node_data
+	
+	# TODO: introduce node types, make it possible to save/load
+	# other types of nodes
+
+func read_choice_data(osn : PanelContainer) -> Dictionary:
+	# osn = option_sub_node
+	return {"choice_text_box": osn.choice_text_box.text, 
+			"condition_check_box": osn.condition_check_box.button_pressed,
+			"condition_text_box": osn.condition_text_box.text, 
+			"hide_check_box": osn.hide_check_box.button_pressed, 
+			"replace_check_box": osn.replace_check_box.button_pressed, 
+			"replace_text_box": osn.replace_text_box.text}
+
+func clear_graph() -> void:
+	graph_edit.clear_connections()
+	var nodes : Array = graph_edit.get_children()
+	for node : Node in nodes:
+		if node is GraphNode:
+			graph_edit.remove_child(node)
+			node.queue_free()
 	node_index = 0
-	for node : Resource in graph_data.nodes:
-		var gnode : Node = con_node.instantiate()
-		# replace this with more versatile instantiation handling
-		# multiple types of node
-		gnode.position_offset = node.position_offset
-		gnode.name = StringName(node.name)
-		gnode.title = node.title
-		graph_edit.add_child(gnode,true)
-		node_index += 1
-	for con : Dictionary in graph_data.connections:
-		var _e : int = graph_edit.connect_node(con.from_node, 
-		 	con.from_port, con.to_node, con.to_port, con.keep_alive)
-		
+	total_nodes = 0
+
+# LOAD
+
 func load_data(file_name: String) -> void:
 	if ResourceLoader.exists(file_name):
 		@warning_ignore("untyped_declaration")
@@ -122,12 +204,59 @@ func load_data(file_name: String) -> void:
 	else:
 		# File not found
 		pass
+
+func init_graph(graph_data: GraphData) -> void:								 # okay
+																			 # are you ready for the pain?
+	
+	clear_graph()															 # first we reset the graph and make sure no nodes are retained
+	node_index = graph_data.node_index
+	
+	for node : Resource in graph_data.nodes: 									 # then we check the save for each saved node...
+		var gnode : Node = con_node.instantiate()								 # ...and instance a new node for each one, which we will fill with data
+		gnode.remove_connections.connect(remove_connections.bind(gnode))		 # don't forget to hook it up to the signal!
 		
-func clear_graph() -> void:
-	graph_edit.clear_connections()
-	var nodes : Array = graph_edit.get_children()
-	for node : Node in nodes:
-		if node is GraphNode:
-			graph_edit.remove_child(node)
-			node.queue_free()
-	node_index = 0
+		gnode.position_offset = node.position_offset							 # we begin with the basic stuff....
+		gnode.name = StringName(node.name)
+		gnode.title = node.title
+																			 # and then we get to the choices
+		var choice_data_array : Array = node.choices							 # which we grab from the save...
+		for i : int in len(choice_data_array):								 # ...then make a fresh option subnode for each...
+			var op_node : Node = con_node_op.instantiate()
+			gnode.add_child(op_node)											 
+
+		graph_edit.add_child(gnode,true)										 # ...and add the node to the graph.
+																			 # we need to do this before we fill in the choice data
+																			 # because of the @onready variables in option_sub_node;
+																			 # we can't assign them until the node has been instanced
+		gnode.speaker_line_edit.text = node.speaker 							 # this goes for all this stuff too
+		gnode.inherit_speaker_check.button_pressed = node.inherit_speaker
+		gnode.node_text.text = node.speaker_text								
+		
+																			 # *now* we pour in the choice data for each one
+		var k : int = 0														 # using k to track which choice we're on
+		for i : Node in gnode.get_children():
+			if i is PanelContainer:
+				write_choice_data(i,choice_data_array[k])
+				gnode.set_slot(k+1,false,1,Color.AQUA,true,1,Color.BLACK)
+				k += 1
+		if k != 0:
+			gnode.set_slot(0,true,1,Color.AQUA,false,1,Color.BLACK)
+		else:
+			gnode.set_slot(0,true,1,Color.AQUA,true,1,Color.BLACK)
+		total_nodes += 1
+																			 # and that's the nodes set up
+																			 # all that's left is to hook everything up again!
+	for con : Dictionary in graph_data.connections:
+		var _e : int = graph_edit.connect_node(con.from_node, 
+		 	con.from_port, con.to_node, con.to_port, con.keep_alive)
+	print(total_nodes)
+	print(node_index)
+
+func write_choice_data(osn : PanelContainer, data : Dictionary) -> void:
+	# osn = option_sub_node
+	osn.choice_text_box.text = data["choice_text_box"]
+	osn.condition_check_box.button_pressed = data["condition_check_box"]
+	osn.condition_text_box.text = data["condition_text_box"] 
+	osn.hide_check_box.button_pressed = data["hide_check_box"] 
+	osn.replace_check_box.button_pressed = data["replace_check_box"] 
+	osn.replace_text_box.text = data["replace_text_box"]

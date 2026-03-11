@@ -6,3 +6,7 @@ class_name NodeData
 @export var name: StringName
 @export var title: String
 @export var position_offset: Vector2
+@export var speaker: String
+@export var inherit_speaker: bool
+@export var speaker_text: String
+@export var choices: Array

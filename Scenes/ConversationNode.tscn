@@ -59,6 +59,5 @@ text = "Button"
 
 [connection signal="delete_request" from="." to="." method="_on_delete_request"]
 [connection signal="resize_request" from="." to="." method="_on_resize_request"]
-[connection signal="slot_updated" from="." to="." method="_on_slot_updated"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer2/add_choice" to="." method="_on_add_choice_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer2/remove_choice" to="." method="_on_remove_choice_pressed"]

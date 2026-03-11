@@ -1,6 +1,13 @@
 extends GraphNode
 
+signal remove_connections
+
 var opsubnode : PackedScene = preload("res://Scenes/OptionSubNode.tscn")
+
+# all the components needed to be accessed when saving
+@onready var speaker_line_edit : Node = $VBoxContainer/HBoxContainer/SpeakerLineEdit
+@onready var inherit_speaker_check : Node = $VBoxContainer/InheritSpeakerCheck
+@onready var node_text : Node = $VBoxContainer/TextEdit
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -35,13 +42,16 @@ func add_choice() -> void:
 	set_slot(slot_num,false,1,Color.AQUA,true,1,Color.BLACK)
 	
 func remove_choice() -> void:
-	var target_child : PanelContainer = get_child(-1)
-	clear_slot(get_child_count()-1)
-	target_child.queue_free()
-	if get_child_count() == 2:
-		# don't love this but it's because queue_free doesn't remove the final choice box
-		# from the child list in time (if at all)
-		set_slot(0,true,1,Color.AQUA,true,1,Color.BLACK)
-
-func _on_slot_updated(slot_index: int) -> void:
-	print(slot_index)
+	var target_child : PanelContainer 
+	if get_child(-1) is PanelContainer:
+		target_child = get_child(-1)
+		remove_connections.emit()
+		# this stops the weird connection issues caused by removing a slot
+		# with an active connection to it
+		# see the similarly named method in main
+		clear_slot(get_child_count()-1)
+		target_child.queue_free()
+		if get_child_count() == 2:
+			# don't love this but it's because queue_free doesn't remove the 
+			# final choice box from the child list in time (if at all)
+			set_slot(0,true,1,Color.AQUA,true,1,Color.BLACK)

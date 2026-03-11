@@ -32,6 +32,7 @@ var con_node_offset : Vector2 = Vector2(0,-90)
 
 @onready var save_as_modal : FileDialog = $SaveAs
 @onready var load_modal : FileDialog = $Load
+@onready var current_save_path : String = ""
 
 func _ready() -> void:
 	save_as_modal.current_dir = "res://"
@@ -112,7 +113,10 @@ func file_menu_bhvr(id : int) -> void:
 		print("New")
 	elif id == 1:
 		# Save
-		save_data(save_path)
+		if current_save_path == "":
+			save_as_modal.show()
+		else:
+			save_data(current_save_path)
 	elif id == 2:
 		# Save As
 		save_as_modal.show()
@@ -124,14 +128,14 @@ func _on_save_as_file_selected(path: String) -> void:
 	if path.right(4) != ".res":
 		path += ".res"
 	if save_data(path):
+		current_save_path = path
 		save_as_modal.hide()
 		
 func _on_load_file_selected(path: String) -> void:
+	current_save_path = path
 	load_data(path)
 
 # SAVE
-
-var save_path : String = "res://SaveData/DataSave.res"
 
 func save_data(file_name: String) -> bool:
 	var graph_data : GraphData = GraphData.new()

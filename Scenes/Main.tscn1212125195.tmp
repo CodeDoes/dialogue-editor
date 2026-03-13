@@ -75,13 +75,6 @@ offset_right = 416.00006
 offset_bottom = 31.0
 text = "Add Action Node"
 
-[node name="AddLogNode" type="Button" parent="Buttons" unique_id=1668938627]
-layout_mode = 0
-offset_left = 435.0
-offset_right = 599.0
-offset_bottom = 31.0
-text = "Add Condition Node"
-
 [connection signal="id_pressed" from="MenuBar/FileMenu" to="." method="_on_file_menu_id_pressed"]
 [connection signal="connection_request" from="GraphEdit" to="." method="_on_graph_edit_connection_request"]
 [connection signal="connection_to_empty" from="GraphEdit" to="." method="_on_graph_edit_connection_to_empty"]
@@ -91,4 +84,3 @@ text = "Add Condition Node"
 [connection signal="file_selected" from="Load" to="." method="_on_load_file_selected"]
 [connection signal="pressed" from="Buttons/AddConNode" to="." method="_on_add_con_button_pressed"]
 [connection signal="pressed" from="Buttons/AddActNode" to="." method="_on_add_act_node_pressed"]
-[connection signal="pressed" from="Buttons/AddLogNode" to="." method="_on_add_log_node_pressed"]

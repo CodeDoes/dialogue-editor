@@ -1,10 +1,12 @@
 extends Control
 
 # TODO: Add in export functionality, to format graphs into json files.
+# TODO: Add additional nodes when selecting "replace" on conversation_nodes
 
 var con_node : Resource = load("res://Scenes/ConversationNode.tscn")
 var con_node_op : Resource = load("res://Scenes/OptionSubNode.tscn")
 var act_node : Resource = load("res://Scenes/ActionNode.tscn")
+var log_node : Resource = load("res://Scenes/LogicNode.tscn")
 
 # this ensures there are never any node-naming conflicts
 # by giving each node a unique identifier
@@ -18,8 +20,9 @@ var total_nodes : int = 0
 
 # the offset for nodes appearing at the cursor
 # should be roughly half the height of the node (without any op_subs)
-var con_node_offset : Vector2 = Vector2(0,-90)
+var con_node_offset : Vector2 = Vector2(0,-110)
 var act_node_offset : Vector2 = Vector2(0,-40)
+var log_node_offset : Vector2 = Vector2(0,-40)
 
 @onready var graph_edit : GraphEdit = $GraphEdit
 @onready var graph_edit_path : NodePath = graph_edit.get_path()
@@ -60,6 +63,9 @@ func _on_add_con_button_pressed() -> void:
 func _on_add_act_node_pressed() -> void:
 	create_node("act_node", get_viewport_rect().size / 2)
 	
+func _on_add_log_node_pressed() -> void:
+	create_node("log_node", get_viewport_rect().size / 2)
+
 func remove_connections(node : GraphNode) -> void:
 	if node.get_child_count() > 2:
 		var connection_list : Array = graph_edit.get_connection_list_from_node(
@@ -93,8 +99,6 @@ func speaker_inheritance_check(from_node : StringName,
 					inh_speaker_box).button_pressed = true
 					# set inherit speaker of next node to true too
 					# the chain must grow
-				
-	# TODO: tidy this ^ up, remove repeated paths to the tickboxes and lineedits
 
 func _on_graph_edit_disconnection_request(from_node: StringName, from_port: int, 
 		to_node: StringName, to_port: int) -> void:
@@ -102,9 +106,15 @@ func _on_graph_edit_disconnection_request(from_node: StringName, from_port: int,
 													# disconnect them nodes
 func _on_graph_edit_connection_to_empty(from_node: StringName, from_port: int, 
 			release_position: Vector2) -> void:
-	var new_node : StringName = create_node("con_node", release_position).name
+	var new_node : StringName 
+	if true:
+		# TODO: Replace this with the logic that checks whether
+		# the slot pertains to an option with the alt_dialogue choice selected,
+		# and if so create a logic node instead
+		new_node = create_node("con_node", release_position).name
 	graph_edit.connect_node(from_node, from_port, new_node, 0)
 	speaker_inheritance_check(from_node, new_node)
+	
 
 func create_node(node_type : String, position_offset : Vector2) -> Node:
 	var node : Node 
@@ -118,13 +128,20 @@ func create_node(node_type : String, position_offset : Vector2) -> Node:
 		node.name = "AN" + str(node_index)	
 		node.position_offset += ((graph_edit.scroll_offset + position_offset
 			) / graph_edit.zoom) + act_node_offset
+	elif node_type == "log_node":
+		node = log_node.instantiate()
+		node.name = "LN" + str(node_index)	
+		node.position_offset += ((graph_edit.scroll_offset + position_offset
+			) / graph_edit.zoom) + act_node_offset
 	node_index += 1 
 	graph_edit.add_child(node)
 	total_nodes += 1
 	return node
+	
 
 func _on_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
 	total_nodes -= len(nodes)
+	
 
 # SAVING, LOADING & EXPORTING #
 
@@ -149,7 +166,7 @@ func _on_file_menu_id_pressed(id: int) -> void:
 		# Load
 		load_modal.show()
 	elif id == 4:
-		print("Functionality TBA")
+		export()
 		
 func general_case_save() -> void:
 	if current_save_path == "":
@@ -306,3 +323,28 @@ func write_choice_data(osn : PanelContainer, data : Dictionary) -> void:
 	osn.replace_text_box.text = data["replace_text_box"]
 
 # EXPORT
+
+func export() -> void:
+	var nodes : Array = graph_edit.get_children()
+	for node : Node in nodes:
+		if node is GraphNode:
+			var node_json : Dictionary = {}
+			if node.title == "ConversationNode":
+				node_json["speaker"] = node.speaker_line_edit.text
+				node_json["text"] = node.node_text.text
+				for i : Node in node.get_children():
+					if i is PanelContainer:
+						var choice_dict_raw : Dictionary = read_choice_data(i)
+						var choice_dict : Dictionary = {}
+						choice_dict["text"] = choice_dict_raw[
+														 "choice_text_box"]
+						if choice_dict_raw["condition_check_box"]:
+							choice_dict["condition"] = choice_dict_raw[
+														 "condition_text_box"]
+							choice_dict["hide"] = choice_dict_raw[
+														 "hide_check_box"]
+							if choice_dict_raw["replace_check_box"]:
+								choice_dict["replace_with"] = choice_dict_raw[
+														 "replace_text_box"]
+						print(choice_dict_raw)
+			print(node_json)

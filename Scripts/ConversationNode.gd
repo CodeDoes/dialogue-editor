@@ -40,7 +40,7 @@ func add_choice() -> void:
 	add_child(opsubnode_inst)
 	var slot_num : int = get_child_count()-1
 	set_slot(slot_num,false,1,Color.AQUA,true,1,Color.BLACK)
-	
+		
 func remove_choice() -> void:
 	var target_child : PanelContainer 
 	if get_child(-1) is PanelContainer:

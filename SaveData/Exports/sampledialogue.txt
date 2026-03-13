@@ -1,0 +1,33 @@
+{
+		# we're using dictionaries and arrays
+		"start": {
+			"speaker": "Brain",
+			"text": "Pain.",
+			"next": "start1"
+		},
+		"start1": {
+			"speaker": "Brain",
+			"text": "An intense, [i]unceasing[/i], unrelenting, unmitigated pain.",
+			"next": "startchoice"
+		},
+		"startchoice": {
+			"speaker": "Brain",
+			"text": "Will you bear the pain?",
+			"next": false,
+			"choices": [
+				{"text":"Bear the pain.","next_id":"start2", 
+					"skill":"Three Churches", "threshold":3},
+				{"text":"Fold.","next_id":"start3"}
+			]
+		},
+		"start2": {
+			"speaker": "Brain",
+			"text": "This is simply more than you can handle.",
+			"next": null
+		},
+		"start3": {
+			"speaker": "Brain",
+			"text": "You give in.",
+			"next": null
+		}
+}

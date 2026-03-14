@@ -86,13 +86,16 @@ func _on_graph_edit_connection_request(from_node: StringName, from_port: int,
 	if from_node.left(1) == "C" && to_node.left(1) == "L" && \
 											origin.get_children().size() > 1:
 		var endpoint : Node = graph_edit.find_child(to_node,true,false)
-		if origin.get_child(from_port+1).replace_check_box.button_pressed:
+		var origin_child : Node = origin.get_child(from_port+1)
+		if origin_child.replace_check_box.button_pressed:
 			endpoint.condition_box.editable = false
 			endpoint.condition_box.text = origin.get_child(
 				from_port+1).condition_text_box.text
-			origin.get_child(
-				from_port+1).condition_text_box.text_changed.connect(
+		origin_child.condition_text_box.text_changed.connect(
 					logic_choice_updater.bind(endpoint))
+		origin_child.replace_check_box.toggled.connect(
+					logic_choice_box_updater.bind(endpoint).bind(
+							origin_child.condition_text_box.text))
 
 func speaker_inheritance_check(from_node : StringName, 
 		to_node : StringName) -> void:
@@ -122,9 +125,11 @@ func _on_graph_edit_disconnection_request(from_node: StringName, from_port: int,
 	if from_node.left(1) == "C" && to_node.left(1) == "L" && \
 											  origin.get_children().size() > 1:
 		graph_edit.find_child(to_node,true,false).condition_box.editable = true
-		origin.get_child(
-			from_port+1).condition_text_box.text_changed.disconnect(
+		var origin_child : Node = origin.get_child(from_port+1)
+		origin_child.condition_text_box.text_changed.disconnect(
 				logic_choice_updater)
+		origin_child.replace_check_box.toggled.disconnect(
+				logic_choice_box_updater)
 
 func _on_graph_edit_connection_to_empty(from_node: StringName, from_port: int, 
 			release_position: Vector2) -> void:
@@ -145,12 +150,21 @@ func _on_graph_edit_connection_to_empty(from_node: StringName, from_port: int,
 		new_node.condition_box.editable = false
 		origin_choice.condition_text_box.text_changed.connect(
 							logic_choice_updater.bind(new_node))
+		origin_choice.replace_check_box.toggled.connect(
+							logic_choice_box_updater.bind(new_node, 
+								origin_choice.condition_text_box.text))
 	graph_edit.connect_node(from_node, from_port, new_node.name, 0)
 	speaker_inheritance_check(from_node, new_node.name)
 	
 func logic_choice_updater(new_text : String, target_node : Node) -> void:
-	target_node.condition_box.text = new_text
+	if !target_node.condition_box.editable:
+		target_node.condition_box.text = new_text
 	
+func logic_choice_box_updater(is_active : bool, update_text : String, 
+		target_node : Node) -> void:
+	target_node.condition_box.editable = !is_active
+	logic_choice_updater(update_text, target_node)
+
 func create_node(node_type : String, position_offset : Vector2) -> Node:
 	var node : Node 
 	if node_type == "con_node":
@@ -173,7 +187,6 @@ func create_node(node_type : String, position_offset : Vector2) -> Node:
 	total_nodes += 1
 	return node
 	
-
 func _on_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
 	total_nodes -= len(nodes)
 	
@@ -257,6 +270,7 @@ func read_node_data(node : Node) -> NodeData:
 		node_data.action_string = node.condition_box.text
 	elif node_data.title == "LogicNode":
 		node_data.logic_string = node.condition_box.text
+		node_data.editable = node.condition_box.editable
 	
 	return node_data
 
@@ -347,6 +361,7 @@ func init_graph(graph_data: GraphData) -> void:								 # okay
 		elif node.title == "LogicNode":										 # ...as are the logic nodes
 			graph_edit.add_child(gnode,true)
 			gnode.condition_box.text = node.logic_string
+			gnode.condition_box.editable = node.editable
 		total_nodes += 1
 																			 # and that's the nodes set up
 																			 # all that's left is to hook everything up again!

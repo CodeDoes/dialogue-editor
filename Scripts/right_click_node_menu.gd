@@ -1,3 +1,4 @@
+@tool
 extends Control
 
 var is_menu_shown : bool
@@ -32,15 +33,15 @@ func _ready() -> void:
 		
 	hide_menu()
 
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("RightClick"):
-		if !is_menu_shown:
-			mouse_pos = get_local_mouse_position()
-			# something fucky is happening here, I think
-			accessed_by_rmb = true
-			show_menu(mouse_pos)
-		else:
-			hide_menu()
+#func _input(event: InputEvent) -> void:
+#	if event.is_action_pressed("RightClick"):
+#		if !is_menu_shown:
+#			mouse_pos = get_local_mouse_position()
+#			# something fucky is happening here, I think
+#			accessed_by_rmb = true
+#			show_menu(mouse_pos)
+#		else:
+#			hide_menu()
 
 func show_menu(position_offset : Vector2) -> void:
 	position += position_offset

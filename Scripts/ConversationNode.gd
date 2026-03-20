@@ -1,3 +1,4 @@
+@tool
 extends GraphNode
 
 signal remove_connections
@@ -10,11 +11,12 @@ var opsubnode : PackedScene = preload("res://Scenes/OptionSubNode.tscn")
 @onready var node_text : Node = $VBoxContainer/TextEdit
 
 func _ready() -> void:
-	set_slot(0,true,1,Color.AQUA,true,1,Color.BLACK)
+	set_slot(0,true,1,Color.AQUA,true,1,Color.RED)
 	
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("Delete") && selected:
-		_on_delete_request()
+	if event is InputEventKey:
+		if event.keycode == KEY_DELETE && selected:
+			_on_delete_request()
 
 func _on_delete_request() -> void:
 	queue_free()
@@ -30,11 +32,11 @@ func _on_remove_choice_pressed() -> void:
 		
 func add_choice() -> void:
 	if get_child_count() == 1:
-		set_slot(0,true,1,Color.AQUA,false,1,Color.BLACK)
+		set_slot(0,true,1,Color.AQUA,false,1,Color.RED)
 	var opsubnode_inst : PanelContainer = opsubnode.instantiate()
 	add_child(opsubnode_inst)
 	var slot_num : int = get_child_count()-1
-	set_slot(slot_num,false,1,Color.AQUA,true,1,Color.BLACK)
+	set_slot(slot_num,false,1,Color.AQUA,true,1,Color.RED)
 		
 func remove_choice() -> void:
 	var target_child : PanelContainer 
@@ -49,4 +51,4 @@ func remove_choice() -> void:
 		if get_child_count() == 2:
 			# don't love this but it's because queue_free doesn't remove the 
 			# final choice box from the child list in time (if at all)
-			set_slot(0,true,1,Color.AQUA,true,1,Color.BLACK)
+			set_slot(0,true,1,Color.AQUA,true,1,Color.RED)

@@ -1,3 +1,4 @@
+@tool
 class_name ConfirmationModal extends Control
 
 signal confirmed(option : int)

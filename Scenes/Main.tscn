@@ -11,6 +11,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_vertical = 3
 script = ExtResource("1_r150o")
 
 [node name="MenuBar" type="MenuBar" parent="." unique_id=1963390531]
@@ -21,6 +22,9 @@ offset_bottom = 35.0
 [node name="FileMenu" type="PopupMenu" parent="MenuBar" unique_id=1692719969]
 oversampling_override = 1.0
 title = "File"
+
+[node name="NodeMenu" type="PopupMenu" parent="MenuBar" unique_id=1092981640]
+title = "Add Node"
 
 [node name="GraphEdit" type="GraphEdit" parent="." unique_id=311309982]
 layout_mode = 1
@@ -52,43 +56,15 @@ size = Vector2i(1280, 800)
 file_mode = 0
 
 [node name="NewFileModal" parent="." unique_id=1986770347 instance=ExtResource("3_rgh2o")]
+process_mode = 3
 visible = false
 layout_mode = 1
 
-[node name="Buttons" type="Control" parent="." unique_id=997592188]
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
-mouse_filter = 2
-
-[node name="AddConNode" type="Button" parent="Buttons" unique_id=1379887549]
-layout_mode = 0
-offset_left = 55.0
-offset_right = 246.0
-offset_bottom = 31.0
-text = "Add Conversation Node"
-
-[node name="AddActNode" type="Button" parent="Buttons" unique_id=1601879299]
-layout_mode = 0
-offset_left = 265.0
-offset_right = 416.00006
-offset_bottom = 31.0
-text = "Add Action Node"
-
-[node name="AddLogNode" type="Button" parent="Buttons" unique_id=1668938627]
-layout_mode = 0
-offset_left = 435.0
-offset_right = 599.0
-offset_bottom = 31.0
-text = "Add Logic Node"
-
 [connection signal="id_pressed" from="MenuBar/FileMenu" to="." method="_on_file_menu_id_pressed"]
+[connection signal="id_pressed" from="MenuBar/NodeMenu" to="." method="_on_node_menu_id_pressed"]
 [connection signal="connection_request" from="GraphEdit" to="." method="_on_graph_edit_connection_request"]
 [connection signal="connection_to_empty" from="GraphEdit" to="." method="_on_graph_edit_connection_to_empty"]
 [connection signal="delete_nodes_request" from="GraphEdit" to="." method="_on_graph_edit_delete_nodes_request"]
 [connection signal="disconnection_request" from="GraphEdit" to="." method="_on_graph_edit_disconnection_request"]
 [connection signal="file_selected" from="SaveAs" to="." method="_on_save_as_file_selected"]
 [connection signal="file_selected" from="Load" to="." method="_on_load_file_selected"]
-[connection signal="pressed" from="Buttons/AddConNode" to="." method="_on_add_con_button_pressed"]
-[connection signal="pressed" from="Buttons/AddActNode" to="." method="_on_add_act_node_pressed"]
-[connection signal="pressed" from="Buttons/AddLogNode" to="." method="_on_add_log_node_pressed"]

@@ -1,3 +1,4 @@
+@tool
 extends PanelContainer
 
 @onready var choice_text_box : TextEdit = $VBoxContainer/choice_text

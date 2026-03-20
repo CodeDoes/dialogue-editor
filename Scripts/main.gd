@@ -1,3 +1,4 @@
+@tool
 extends Control
 
 # TODO: Add in export functionality, to format graphs into json files.
@@ -36,8 +37,7 @@ var log_node_offset : Vector2 = Vector2(0,-40)
 @onready var right_click_menu : Control = $RightClickNodeMenu
 
 @onready var file_menu : PopupMenu = $MenuBar/FileMenu
-@onready var file_menu_options : Array = ["New","Save","Save As",
-										 "Load","Export"]
+@onready var node_menu : PopupMenu = $MenuBar/NodeMenu
 
 @onready var save_as_modal : FileDialog = $SaveAs
 @onready var load_modal : FileDialog = $Load
@@ -47,24 +47,25 @@ var log_node_offset : Vector2 = Vector2(0,-40)
 func _ready() -> void:
 	save_as_modal.current_dir = default_path
 	load_modal.current_dir = default_path
-	for i : String in file_menu_options:
-		file_menu.add_item(i)
 		
 func _input(event: InputEvent) -> void:
-	if event.is_action("SaveShortcut", true):
-		general_case_save()
+	if event is InputEventKey:
+		if visible && event.is_action_pressed("s",true):
+			general_case_save()
 
-func _on_add_con_button_pressed() -> void: 						
-	var new_con_node : Node = create_node("con_node", 
-		get_viewport_rect().size / 2)
-	new_con_node.remove_connections.connect(
-		remove_connections.bind(new_con_node))
-	
-func _on_add_act_node_pressed() -> void:
-	create_node("act_node", get_viewport_rect().size / 2)
-	
-func _on_add_log_node_pressed() -> void:
-	create_node("log_node", get_viewport_rect().size / 2)
+func _on_node_menu_id_pressed(id: int) -> void:
+	if id == 0:
+		# Conversation
+		var new_con_node : Node = create_node("con_node", 
+			get_viewport_rect().size / 2)
+		new_con_node.remove_connections.connect(
+			remove_connections.bind(new_con_node))
+	elif id == 1:
+		# Action
+		create_node("act_node", get_viewport_rect().size / 2)
+	elif id == 2:
+		# Logic
+		create_node("log_node", get_viewport_rect().size / 2)
 
 func remove_connections(node : GraphNode) -> void:
 	if node.get_child_count() > 2:
@@ -190,7 +191,6 @@ func create_node(node_type : String, position_offset : Vector2) -> Node:
 func _on_graph_edit_delete_nodes_request(nodes: Array[StringName]) -> void:
 	total_nodes -= len(nodes)
 	
-
 # SAVING, LOADING & EXPORTING #
 
 # MENU
@@ -348,12 +348,12 @@ func init_graph(graph_data: GraphData) -> void:								 # okay
 			for i : Node in gnode.get_children():
 				if i is PanelContainer:
 					write_choice_data(i,choice_data_array[k])
-					gnode.set_slot(k+1,false,1,Color.AQUA,true,1,Color.BLACK)
+					gnode.set_slot(k+1,false,1,Color.AQUA,true,1,Color.RED)
 					k += 1
 			if k != 0:
-				gnode.set_slot(0,true,1,Color.AQUA,false,1,Color.BLACK)
+				gnode.set_slot(0,true,1,Color.AQUA,false,1,Color.RED)
 			else:
-				gnode.set_slot(0,true,1,Color.AQUA,true,1,Color.BLACK)
+				gnode.set_slot(0,true,1,Color.AQUA,true,1,Color.RED)
 		
 		elif node.title == "ActionNode":										 # the action nodes are comparatively much simpler...
 			graph_edit.add_child(gnode,true)

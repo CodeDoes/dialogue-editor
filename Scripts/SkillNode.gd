@@ -3,6 +3,10 @@ extends GraphNode
 
 @onready var class_dropdown : OptionButton = $MarginContainer/GridContainer/ClassDropdown
 @onready var skill_dropdown : OptionButton = $MarginContainer/GridContainer/SkillDropdown
+@onready var threshold : SpinBox = $MarginContainer/GridContainer/SpinBox
+@onready var success_box : TextEdit = $MarginContainer/GridContainer/TextEdit
+@onready var failure_box : TextEdit = $MarginContainer/GridContainer/TextEdit2
+
 @onready var mar_cont : MarginContainer = $MarginContainer
 	
 var margin_top_value : int = 20
@@ -25,6 +29,7 @@ func _ready() -> void:
 	$MarginContainer/GridContainer/TextEdit2.custom_minimum_size.x = text_box_width
 	
 	set_slot(0,true,1,Color.AQUA,true,1,Color.RED)
+	class_dropdown.clear()
 	for i : String in skill_class_array:
 		class_dropdown.add_item(i)
 	_on_class_dropdown_item_selected(0)

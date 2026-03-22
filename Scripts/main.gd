@@ -50,6 +50,7 @@ var end_node_offset : Vector2 = Vector2(0,-40)
 func _ready() -> void:
 	save_as_modal.current_dir = default_path
 	load_modal.current_dir = default_path
+	clear_graph()
 		
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey:
@@ -256,6 +257,7 @@ func save_data(file_name: String) -> bool:
 			graph_data.nodes.append(node_data)
 	graph_data.connections = graph_edit.connections
 	graph_data.node_index = node_index
+	graph_data.json = export()
 	if ResourceSaver.save(graph_data, file_name) == OK:
 		print("Graph saved successfully")
 		return true
@@ -282,6 +284,14 @@ func read_node_data(node : Node) -> NodeData:
 	elif node_data.title == "LogicNode":
 		node_data.logic_string = node.condition_box.text
 		node_data.editable = node.condition_box.editable
+	elif node_data.title == "SkillNode":
+		node_data.skill_class_name = node.skill_class_array[
+												node.class_dropdown.selected]
+		var skill_arr : Array = node.skill_dict[node_data.skill_class_name]
+		node_data.skill_name = skill_arr[node.skill_dropdown.selected]
+		node_data.threshold = node.threshold.value
+		node_data.success_text = node.success_box.text
+		node_data.failure_text = node.failure_box.text
 		
 	return node_data
 
@@ -304,6 +314,7 @@ func clear_graph() -> void:
 	node_index = 0
 	total_nodes = 0
 	graph_edit.scroll_offset = Vector2(0,0)
+	create_node("start_node",get_viewport_rect().size / 5)
 
 # LOAD
 
@@ -326,6 +337,7 @@ func init_graph(graph_data: GraphData) -> void:								 # okay
 	clear_graph()															 # first we reset the graph and make sure no nodes are retained
 	node_index = graph_data.node_index
 	
+	
 	for node : Resource in graph_data.nodes: 									 # then we check the save for each saved node...
 		var gnode : Node 
 		if node.title == "ConversationNode":
@@ -335,11 +347,13 @@ func init_graph(graph_data: GraphData) -> void:								 # okay
 			gnode = act_node.instantiate()
 		elif node.title == "LogicNode":
 			gnode = log_node.instantiate()
+		elif node.title == "SkillNode":
+			gnode = skill_node.instantiate()
 		elif node.title == "StartNode":
 			gnode = start_node.instantiate()
 		elif node.title == "EndNode":
 			gnode = end_node.instantiate()
-		
+					
 		gnode.position_offset = node.position_offset							 # we begin with the basic stuff, common to all nodes...
 		gnode.name = StringName(node.name)
 		gnode.title = node.title
@@ -369,14 +383,23 @@ func init_graph(graph_data: GraphData) -> void:								 # okay
 				gnode.set_slot(0,true,1,Color.AQUA,false,1,Color.RED)
 			else:
 				gnode.set_slot(0,true,1,Color.AQUA,true,1,Color.RED)
-		
 		else:
 			graph_edit.add_child(gnode,true)
 			if node.title == "ActionNode":									 # the action nodes are comparatively much simpler...
 				gnode.action_box.text = node.action_string
-			elif node.title == "LogicNode":									 # ...as are the logic nodes
+			elif node.title == "LogicNode":									 # ...as are the logic nodes...
 				gnode.condition_box.text = node.logic_string
 				gnode.condition_box.editable = node.editable
+			elif node.title == "SkillNode":									 # ...while the skill nodes need a lil more tlc
+				var class_index : int = gnode.skill_class_array.find(
+					node.skill_class_name)
+				gnode.class_dropdown.selected = class_index
+				gnode._on_class_dropdown_item_selected(class_index)
+				gnode.skill_dropdown.selected = gnode.skill_dict[
+					node.skill_class_name].find(node.skill_name)
+				gnode.threshold.value = node.threshold
+				gnode.success_box.text = node.success_text
+				gnode.failure_box.text = node.failure_text
 		total_nodes += 1
 																			 # and that's the nodes set up
 																			 # all that's left is to hook everything up again!
@@ -395,13 +418,13 @@ func write_choice_data(osn : PanelContainer, data : Dictionary) -> void:
 
 # EXPORT
 
-func export() -> void:
+func export() -> Dictionary:
 	var nodes : Array = graph_edit.get_children()
+	var conversation_json : Dictionary
 	for node : Node in nodes:
 		if node is GraphNode:
 			var node_json : Dictionary = {}
 			var node_name : String = StringName(node.name)
-			node_json["name"] = node_name
 				# we define this as a variable because we use it later as a key
 			node_json["title"] = node.title
 			if node.title == "ConversationNode":
@@ -449,8 +472,19 @@ func export() -> void:
 							node_json["true_goes_to"] = j["to_node"]
 						elif j["from_port"] == 1:
 							node_json["false_goes_to"] = j["to_node"]
+			elif node.title == "SkillNode":
+				node_json["skill"] = node.skill_dict[node.skill_class_array[
+					node.class_dropdown.selected]][
+						node.skill_dropdown.selected]
+				node_json["threshold"] = int(node.threshold.value)
+				node_json["success_text"] = node.success_box.text
+				node_json["failure_text"] = node.failure_box.text
+				for j : Dictionary in graph_edit.connections:
+					if j["from_node"] == node_name:
+						node_json["goes_to"] = j["to_node"]
 			elif node.title == "StartNode":
 				for j : Dictionary in graph_edit.connections:
 					if j["from_node"] == node_name:
 						node_json["goes_to"] = j["to_node"]
-			print(node_json)
+			conversation_json[node_name] = node_json
+	return conversation_json
